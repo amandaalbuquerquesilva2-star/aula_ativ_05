@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Site Amanda — Visão Inteligente</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #12121a;
+      --card:      #1a1a26;
+      --border:    #2a2a40;
+      --accent:    #c084fc;
+      --accent2:   #818cf8;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --success:   #34d399;
+      --warning:   #fbbf24;
+      --danger:    #f87171;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* ── Gradient orbs ── */
+    .orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); opacity: .18;
+      pointer-events: none; z-index: 0;
+    }
+    .orb-1 { width: 500px; height: 500px; background: var(--accent);  top: -150px; left: -150px; }
+    .orb-2 { width: 400px; height: 400px; background: var(--accent2); bottom: -100px; right: -100px; }
+
+    /* ── Layout ── */
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 860px; margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .site-header .badge-chip {
+      display: inline-block;
+      background: linear-gradient(135deg, #c084fc22, #818cf822);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-family: 'Syne', sans-serif;
+      font-size: .7rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      padding: .35em 1em;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .site-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.2rem, 6vw, 3.6rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #e2e8f0 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    .site-header p.lead {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-top: .8rem;
+      font-weight: 300;
+    }
+
+    /* ── Card ── */
+    .glass-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      overflow: hidden;
+      transition: box-shadow .3s;
+    }
+    .glass-card:hover { box-shadow: 0 0 40px #c084fc18; }
+    .card-header-bar {
+      background: linear-gradient(90deg, #c084fc18, #818cf808);
+      border-bottom: 1px solid var(--border);
+      padding: .75rem 1.25rem;
+      display: flex; align-items: center; gap: .5rem;
+      font-size: .8rem; color: var(--muted);
+      font-family: 'Syne', sans-serif; letter-spacing: .08em;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #f87171; } .dot-y { background: #fbbf24; } .dot-g { background: #34d399; }
+
+    /* ── Webcam container ── */
+    #webcam-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 220px;
+      padding: 1.5rem;
+    }
+    #webcam-container canvas {
+      border-radius: .75rem;
+      max-width: 100%;
+      box-shadow: 0 0 30px #c084fc28;
+      border: 1px solid var(--border);
+    }
+
+    /* Placeholder when webcam not yet started */
+    .cam-placeholder {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem 1rem;
+    }
+    .cam-placeholder i { font-size: 3rem; color: var(--border); margin-bottom: .75rem; }
+    .cam-placeholder p { font-size: .9rem; }
+
+    /* ── Start button ── */
+    .btn-start {
+      display: inline-flex;
+      align-items: center; gap: .6rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: .85rem 2rem;
+      border-radius: 999px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 0 0 0 #c084fc44;
+      letter-spacing: .04em;
+    }
+    .btn-start::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .btn-start:hover { transform: translateY(-2px); box-shadow: 0 0 28px #c084fc55; }
+    .btn-start:hover::before { opacity: .06; }
+    .btn-start:active { transform: translateY(0); }
+    .btn-start.running {
+      background: linear-gradient(135deg, #334155, #1e293b);
+      box-shadow: none;
+    }
+    .btn-start .pulse-ring {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; background: #fff;
+      position: relative;
+    }
+    .btn-start.running .pulse-ring::after {
+      content: '';
+      position: absolute; inset: -4px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      animation: pulse 1.2s ease-out infinite;
+    }
+    @keyframes pulse {
+      0%   { transform: scale(1); opacity: .8; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    /* ── Labels / Progress bars ── */
+    #label-container {
+      padding: 0 1.25rem 1.5rem;
+    }
+    .prediction-item {
+      margin-bottom: 1rem;
+    }
+    .prediction-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: .35rem;
+    }
+    .class-name {
+      font-family: 'Syne', sans-serif;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: .04em;
+    }
+    .class-pct {
+      font-size: .8rem;
+      font-weight: 500;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .progress-track {
+      height: 8px;
+      background: var(--surface);
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      transition: width .25s ease, background .4s;
+      box-shadow: 0 0 8px #c084fc66;
+    }
+    .progress-bar-fill.high   { background: linear-gradient(90deg, var(--success), #6ee7b7); box-shadow: 0 0 8px #34d39966; }
+    .progress-bar-fill.medium { background: linear-gradient(90deg, var(--warning), #fde68a); box-shadow: 0 0 8px #fbbf2466; }
+    .progress-bar-fill.low    { background: linear-gradient(90deg, var(--accent2), var(--accent)); box-shadow: 0 0 8px #818cf866; }
+
+    /* ── Status chip ── */
+    .status-bar {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      font-size: .8rem; color: var(--muted);
+      padding: .5rem 0 0;
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted);
+    }
+    .status-dot.active {
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: blink 1.5s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Footer ── */
+    .site-footer {
+      text-align: center;
+      margin-top: 3rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .site-footer span { color: var(--accent); }
+
+    /* ── Responsive tweaks ── */
+    @media (max-width: 576px) {
+      .btn-start { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="badge-chip"><i class="bi bi-cpu me-1"></i>Teachable Machine</div>
+    <h1>Visão Inteligente</h1>
+    <p class="lead">Reconhecimento de imagem em tempo real com sua câmera</p>
+  </header>
+
+  <!-- Main card -->
+  <div class="glass-card mb-4">
+    <div class="card-header-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span style="margin-left:.5rem;">camera.feed</span>
+    </div>
+
+    <!-- Webcam output -->
+    <div id="webcam-container">
+      <div class="cam-placeholder" id="cam-placeholder">
+        <i class="bi bi-camera-video d-block"></i>
+        <p>Clique em <strong>Ativar Câmera</strong> para iniciar</p>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Aguardando inicialização…</span>
+    </div>
+
+    <!-- Predictions -->
+    <div id="label-container" class="mt-3"></div>
+  </div>
+
+  <!-- Button -->
+  <div class="d-flex justify-content-center">
+    <button class="btn-start" id="start-btn" onclick="init()">
+      <span class="pulse-ring"></span>
+      <i class="bi bi-camera-fill" id="btn-icon"></i>
+      <span id="btn-label">Ativar Câmera</span>
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer mt-5">
+    Desenvolvido por <span>Amanda</span> · Powered by Teachable Machine &amp; TensorFlow.js
+  </footer>
+
+</div>
+
+<!-- TensorFlow & Teachable Machine -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  const MODEL_URL = "https://teachablemachine.withgoogle.com/models/zyXVyrY_-/";
+
+  let model, webcam, labelContainer, maxPredictions;
+  let started = false;
+
+  // Build prediction UI items
+  function buildPredictionItems(count) {
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "";
+    for (let i = 0; i < count; i++) {
+      const item = document.createElement("div");
+      item.className = "prediction-item";
+      item.innerHTML = `
+        <div class="prediction-header">
+          <span class="class-name" id="class-name-${i}">Classe ${i+1}</span>
+          <span class="class-pct" id="class-pct-${i}">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-bar-fill low" id="bar-${i}"></div>
+        </div>`;
+      labelContainer.appendChild(item);
+    }
+  }
+
+  async function init() {
+    if (started) return;
+    started = true;
+
+    const btn   = document.getElementById("start-btn");
+    const icon  = document.getElementById("btn-icon");
+    const label = document.getElementById("btn-label");
+
+    btn.classList.add("running");
+    icon.className  = "bi bi-hourglass-split";
+    label.textContent = "Carregando modelo…";
+
+    setStatus("Carregando modelo de IA…", false);
+
+    try {
+      model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+      maxPredictions = model.getTotalClasses();
+
+      setStatus("Acessando câmera…", false);
+
+      webcam = new tmImage.Webcam(280, 280, true);
+      await webcam.setup();
+      await webcam.play();
+
+      // Hide placeholder, show webcam
+      document.getElementById("cam-placeholder").style.display = "none";
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+      buildPredictionItems(maxPredictions);
+
+      setStatus("Modelo ativo — reconhecendo ao vivo", true);
+      icon.className  = "bi bi-record-circle";
+      label.textContent = "Câmera ativa";
+
+      window.requestAnimationFrame(loop);
+    } catch (err) {
+      setStatus("Erro: " + err.message, false);
+      btn.classList.remove("running");
+      icon.className  = "bi bi-camera-fill";
+      label.textContent = "Tentar novamente";
+      started = false;
+    }
+  }
+
+  async function loop() {
+    webcam.update();
+    await predict();
+    window.requestAnimationFrame(loop);
+  }
+
+  async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+
+    for (let i = 0; i < maxPredictions; i++) {
+      const p   = prediction[i];
+      const pct = (p.probability * 100).toFixed(1);
+      const val = parseFloat(pct);
+
+      // Update label & percentage
+      document.getElementById(`class-name-${i}`).textContent = p.className;
+      document.getElementById(`class-pct-${i}`).textContent  = pct + "%";
+
+      // Update bar width
+      const bar = document.getElementById(`bar-${i}`);
+      bar.style.width = val + "%";
+
+      // Colour-code by confidence
+      bar.className = "progress-bar-fill " + (val >= 70 ? "high" : val >= 40 ? "medium" : "low");
+    }
+  }
+
+  function setStatus(text, active) {
+    document.getElementById("status-text").textContent = text;
+    const dot = document.getElementById("status-dot");
+    dot.className = "status-dot" + (active ? " active" : "");
+  }
+</script>
+</body>
+</html>
